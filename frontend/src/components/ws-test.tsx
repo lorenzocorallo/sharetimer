@@ -1,47 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import useWebSocket, { ReadyState } from "react-use-websocket";
+
+const url = "ws://localhost:8080/api/ws"
 
 export function WebSocketTest({ i }: { i: number }) {
-  const ws = useRef<WebSocket | null>();
-  const [open, setOpen] = useState<boolean>(false);
+  const { readyState, lastMessage, sendMessage } = useWebSocket(url)
+  const open = readyState === ReadyState.OPEN;
+
   const [msgs, setMsgs] = useState<string[]>([]);
   const [input, setInput] = useState<string>("");
 
-  function handleConnect(): void {
-    const w = new WebSocket("ws://localhost:8080/api/ws");
-    w.addEventListener("open", () => {
-      setOpen(true);
-      console.log("connected", i);
-    });
-    w.addEventListener("close", () => {
-      setOpen(false);
-    });
-    w.addEventListener("error", (ev) => {
-      console.error(ev);
-    });
-    w.addEventListener("message", (ev) => {
-      const s = ev.data;
-      if (typeof s === "string") {
-        setMsgs((v) => [...v, s]);
-      }
-    });
-
-    ws.current = w;
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>): void {
+    e.preventDefault();
+    if (open) sendMessage(input);
+    setInput("");
   }
 
   useEffect(() => {
-    return () => {
-      if (ws.current) {
-        ws.current.close();
-        console.log("disconnecting...", i);
-      }
-    };
-  }, [i]);
+    if (lastMessage) {
+      setMsgs(p => [...p, lastMessage.data])
+    }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>): void {
-    e.preventDefault();
-    if (ws.current && open) ws.current.send(input);
-    setInput("");
-  }
+  }, [lastMessage])
 
   return (
     <div className="flex-1 flex flex-col justify-start items-center gap-2 p-4">
@@ -50,18 +30,17 @@ export function WebSocketTest({ i }: { i: number }) {
         {!open && <span className="text-red-400">Disconnected</span>}
       </h2>
 
-      {!open && <button onClick={handleConnect} className="outline-none bg-green-400 p-2 rounded-xl">CONNECT</button>}
-
-      {open && <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="bg-transparent border"
-        />
-        <button type="submit">Send</button>
-      </form>
-      }
+      {open && (
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="bg-transparent border"
+          />
+          <button type="submit">Send</button>
+        </form>
+      )}
 
       {msgs.map((m) => (
         <p>{m}</p>
