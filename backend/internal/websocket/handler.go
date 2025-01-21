@@ -3,26 +3,54 @@ package websocket
 import (
 	"log"
 	"net/http"
-	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-type WSClient struct {
-	Conn *websocket.Conn
+type Client struct {
+	conn *websocket.Conn
 }
 
 type WSServer struct {
-	clients  map[*WSClient]bool
-	mux      sync.RWMutex
-	upgrader websocket.Upgrader
+	clients    map[*Client]bool
+	register   chan *Client
+	unregister chan *Client
+	broadcast  chan []byte
 }
 
 func NewWebSocketServer() *WSServer {
 	return &WSServer{
-		clients:  make(map[*WSClient]bool),
-		upgrader: upgrader,
-		mux:      sync.RWMutex{},
+		clients:    make(map[*Client]bool),
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+		broadcast:  make(chan []byte),
+	}
+}
+
+func (s *WSServer) Run() {
+	for {
+		select {
+		case client := <-s.register:
+			s.clients[client] = true
+			log.Printf("Client connected. Total clients: %d", len(s.clients))
+
+		case client := <-s.unregister:
+			if _, ok := s.clients[client]; ok {
+				delete(s.clients, client)
+				client.conn.Close()
+			}
+			log.Printf("Client disconnected. Total clients: %d", len(s.clients))
+
+		case message := <-s.broadcast:
+			for client := range s.clients {
+				err := client.conn.WriteMessage(websocket.TextMessage, message)
+				if err != nil {
+					log.Printf("Error broadcasting message: %v", err)
+					s.unregister <- client
+				}
+			}
+		}
 	}
 }
 
@@ -33,65 +61,31 @@ func (s *WSServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := WSClient{
-		Conn: conn,
-	}
+	client := &Client{conn: conn}
+	s.register <- client
 
-	s.mux.Lock()
-	s.clients[&client] = true
-	s.mux.Unlock()
+	// Setup ping/pong handlers
+	conn.SetPingHandler(func(string) error {
+		return conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(10*time.Second))
+	})
 
-	log.Printf("Client %v connected. Total clients: %d", client, len(s.clients))
-
-	go s.handleClient(&client)
+	// Start reading messages in a goroutine
+	go s.handleClient(client)
 }
 
-func (s *WSServer) handleClient(client *WSClient) {
+func (s *WSServer) handleClient(client *Client) {
 	defer func() {
-		// Clean up when the client disconnects
-		s.mux.Lock()
-		delete(s.clients, client)
-		s.mux.Unlock()
-
-		client.Conn.Close()
-		log.Printf("Client %v disconnected. Total clients: %d", client, len(s.clients))
+		s.unregister <- client
 	}()
 
 	for {
-		// Read message from client
-		messageType, message, err := client.Conn.ReadMessage()
+		_, message, err := client.conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway,
-				websocket.CloseAbnormalClosure) {
-				log.Printf("Client %v error: %v", client, err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("Error reading message: %v", err)
 			}
 			break
 		}
-
-		// Log the received message
-		log.Printf("Received message from client %v: %s", client, message)
-
-		// Broadcast the message to all clients
-		s.broadcastMessage(client, messageType, message)
-	}
-}
-
-// broadcastMessage sends a message to all connected clients
-func (s *WSServer) broadcastMessage(sender *WSClient, messageType int, message []byte) {
-	s.mux.RLock()
-	defer s.mux.RUnlock()
-
-	for client := range s.clients {
-		// You can choose to skip sending to the sender by uncommenting the next line
-		if client == sender {
-			continue
-		}
-
-		log.Printf("Sending msg from %v to %v", sender, client)
-
-		err := client.Conn.WriteMessage(messageType, message)
-		if err != nil {
-			log.Printf("Error broadcasting to client %v: %v", client, err)
-		}
+		s.broadcast <- message
 	}
 }

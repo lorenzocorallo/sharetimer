@@ -25,12 +25,12 @@ func main() {
 	database.InitDB()
 
 	r := mux.NewRouter()
-	ws := websocket.NewWebSocketServer()
-
-	// API routes
 	api := r.PathPrefix("/api").Subrouter()
 	// api.HandleFunc("/timer", createTimer).Methods("POST")
 	// api.HandleFunc("/timer/{id}", getTimer).Methods("GET")
+
+	ws := websocket.NewWebSocketServer()
+	go ws.Run()
 	api.HandleFunc("/ws", ws.HandleWebSocket)
 
 	// In production, serve static files
