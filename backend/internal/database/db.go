@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -11,17 +10,24 @@ import (
 )
 
 var DB *gorm.DB
+var config *Config
 
 func InitDB() {
-	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_PORT"),
-	)
+	config = &Config{
+		host:     os.Getenv("DB_HOST"),
+		port:     os.Getenv("DB_PORT"),
+		user:     os.Getenv("DB_USER"),
+		password: os.Getenv("DB_PASSWORD"),
+		dbName:   os.Getenv("DB_NAME"),
+		sslmode:  os.Getenv("DB_SSL_MODE"),
+	}
 
+	err := createDBIfNotExists()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dsn := config.makeDsn(true)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
