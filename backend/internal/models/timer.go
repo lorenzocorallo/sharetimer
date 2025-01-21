@@ -5,7 +5,7 @@ import (
 )
 
 type Timer struct {
-	ID          string    `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ID          string    `json:"id" gorm:"primaryKey"`
 	Duration    int64     `json:"duration"`
 	StartTime   int64     `json:"startTime" gorm:default:0`
 	LastPause   int64     `json:"lastPause" gorm:"default:0"`

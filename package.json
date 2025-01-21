@@ -2,9 +2,13 @@
   "name": "sharetimer",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node scripts/dev.js"
+  },
+  "devDependencies": {
+    "chalk": "^5.4.1",
+    "concurrently": "^9.1.2"
   },
   "keywords": [],
   "author": "",
