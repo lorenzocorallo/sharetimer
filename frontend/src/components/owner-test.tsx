@@ -1,43 +1,71 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 
 const url = "ws://localhost:8080/api/ws";
 type TimerState = "created" | "running" | "paused";
+const tempUserId = "owner_test";
 
 export function OwnerTest() {
-  const { readyState, lastMessage, sendMessage } = useWebSocket(url);
+  const { readyState, lastMessage, sendMessage } = useWebSocket(url, {
+    onOpen: () => {
+      sendMessage(`1:cmd:auth:setid:${tempUserId}`);
+    },
+  });
   const open = readyState === ReadyState.OPEN;
 
   const [msgs, setMsgs] = useState<string[]>([]);
   const [timerId, setTimerId] = useState<string>("TESTER");
   const [timerState, setTimerState] = useState<TimerState | null>();
+  const [clients, setClients] = useState<number>(0);
 
   function handleCreate(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault();
-    if (open) sendMessage(`1:create:${timerId}`);
+    if (open) sendMessage(`1:cmd:timer:create:${timerId}`);
     setTimerState("created");
   }
 
   function handleStart(): void {
-    if (open) sendMessage(`1:start:${timerId}`);
+    if (open) sendMessage(`1:cmd:timer:start:${timerId}`);
     setTimerState("running");
   }
 
   function handlePause(): void {
-    if (open) sendMessage(`1:pause:${timerId}`);
+    if (open) sendMessage(`1:cmd:timer:pause:${timerId}`);
     setTimerState("paused");
   }
 
   function handleResume(): void {
-    if (open) sendMessage(`1:resume:${timerId}`);
+    if (open) sendMessage(`1:cmd:timer:resume:${timerId}`);
     setTimerState("running");
   }
+
+  const handleMessage = useCallback(
+    (msg: string) => {
+      const [version, type, area, id, event] = msg.split(":");
+
+      if (
+        parseInt(version) !== 1 ||
+        type !== "event" ||
+        area !== "timer" ||
+        id !== timerId
+      )
+        return;
+
+      if (event === "join") {
+        setClients((v) => v + 1);
+      } else if (event === "leave") {
+        setClients((v) => Math.max(0, v - 1));
+      }
+    },
+    [timerId],
+  );
 
   useEffect(() => {
     if (lastMessage) {
       setMsgs((p) => [...p, lastMessage.data]);
+      handleMessage(lastMessage.data);
     }
-  }, [lastMessage]);
+  }, [handleMessage, lastMessage]);
 
   return (
     <div className="flex-1 flex flex-col justify-start items-center gap-2 p-4">
@@ -60,6 +88,7 @@ export function OwnerTest() {
       ) : (
         <>
           <p>Connected to timer {timerId} as owner.</p>
+          <p>{clients} clients connected.</p>
           {timerState === "created" && (
             <button
               onClick={handleStart}

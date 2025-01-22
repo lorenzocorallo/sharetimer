@@ -3,9 +3,14 @@ import useWebSocket, { ReadyState } from "react-use-websocket";
 
 const url = "ws://localhost:8080/api/ws";
 type TimerState = "created" | "running" | "paused";
+const tempUserId = "client_test";
 
 export function ClientTest() {
-  const { readyState, lastMessage, sendMessage } = useWebSocket(url);
+  const { readyState, lastMessage, sendMessage } = useWebSocket(url, {
+    onOpen: () => {
+      sendMessage(`1:cmd:auth:setid:${tempUserId}`);
+    },
+  });
   const open = readyState === ReadyState.OPEN;
 
   const [msgs, setMsgs] = useState<string[]>([]);
@@ -14,23 +19,30 @@ export function ClientTest() {
 
   function handleJoin(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault();
-    if (open) sendMessage(`1:join:${timerId}`);
+    if (open) sendMessage(`1:cmd:timer:join:${timerId}`);
     setTimerState("created"); // temp
+  }
+
+  function handleLeave(): void {
+    if (open) sendMessage(`1:cmd:timer:leave:${timerId}`);
+    setTimerState(null); // temp
   }
 
   const handleMessage = useCallback(
     (msg: string) => {
-      const [version, event, msgTimerId] = msg.split(":");
-      if (!version || parseInt(version) !== 1)
-        return console.error("version mismatch");
-      if (!event || !["resumed", "paused", "started"].includes(event))
-        return console.error("unknown cmd");
-      if (!event || msgTimerId !== timerId)
-        return console.error("event refers to another timer");
+      const [version, type, area, id, event] = msg.split(":");
 
-      if (event === "resumed" || event === "started") {
+      if (
+        parseInt(version) !== 1 ||
+        type !== "event" ||
+        area !== "timer" ||
+        id !== timerId
+      )
+        return;
+
+      if (event === "resume" || event === "start") {
         setTimerState("running");
-      } else if (event === "paused") {
+      } else if (event === "pause") {
         setTimerState("paused");
       }
     },
@@ -63,7 +75,15 @@ export function ClientTest() {
           <button type="submit">Join</button>
         </form>
       ) : (
-        <p>Connected to timer {timerId} as client.</p>
+        <>
+          <p>Connected to timer {timerId} as client.</p>
+          <button
+            onClick={handleLeave}
+            className="py-2 px-8 rounded-xl bg-red-700 hover:bg-red-600"
+          >
+            X
+          </button>
+        </>
       )}
 
       <p>Timer State: {timerState}</p>
