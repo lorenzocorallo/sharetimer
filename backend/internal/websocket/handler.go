@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -37,7 +38,7 @@ type Timer struct {
 func NewWebSocketServer() *WSServer {
 	return &WSServer{
 		clients:    make(map[*Client]bool),
-		timers:			make(map[string]*Timer),
+		timers:     make(map[string]*Timer),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		broadcast:  make(chan *Msg),
@@ -49,14 +50,14 @@ func (s *WSServer) Run() {
 		select {
 		case client := <-s.register:
 			s.clients[client] = true
-			log.Printf("Client connected. Total clients: %d", len(s.clients))
+			log.Printf("Client %v connected. Total clients: %d", client, len(s.clients))
 
 		case client := <-s.unregister:
 			if _, ok := s.clients[client]; ok {
 				delete(s.clients, client)
 				client.conn.Close()
 			}
-			log.Printf("Client disconnected. Total clients: %d", len(s.clients))
+			log.Printf("Client %v disconnected. Total clients: %d", client, len(s.clients))
 		}
 	}
 }
@@ -107,7 +108,7 @@ func (s *WSServer) handleClient(client *Client) {
 		}
 
 		cmd := splitted[1]
-		timerId := strings.ToUpper(splitted[2]);
+		timerId := strings.ToUpper(splitted[2])
 		// args := splitted[3:]
 
 		if len(timerId) != 6 {
@@ -115,7 +116,22 @@ func (s *WSServer) handleClient(client *Client) {
 			continue
 		}
 
-		if cmd == "create" {
+		timer := s.timers[timerId]
+
+		if timer == nil && slices.Contains([]string{"join", "leave", "pause", "resume"}, cmd) {
+			log.Printf("client %v tried to %s non-existing timer with id: %s", client, cmd, timerId)
+			continue
+		}
+
+		if timer != nil && slices.Contains([]string{"create"}, cmd) {
+			log.Printf("client %v tried to create already existing timer with id: %s", client, timerId)
+			continue
+		}
+
+		log.Printf("client %v sent command: \"%s\"", client, message)
+
+		switch cmd {
+		case "create":
 			log.Printf("client %v created timer %s", client, timerId)
 			s.timers[timerId] = &Timer{
 				id:      timerId,
@@ -123,16 +139,7 @@ func (s *WSServer) handleClient(client *Client) {
 				owner:   client,
 				running: false,
 			}
-			continue
-		}
 
-		timer := s.timers[timerId]
-		if timer == nil {
-			log.Printf("Timer with id %s not found", timerId)
-			continue
-		}
-
-		switch cmd {
 		case "join":
 			if client != timer.owner {
 				timer.clients[client] = true

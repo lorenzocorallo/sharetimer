@@ -1,10 +1,11 @@
-import { WebSocketTest } from "./components/ws-test";
+import { ClientTest } from "./components/client-test";
+import { OwnerTest } from "./components/owner-test";
 
 function App() {
   return (
     <div className="flex w-full h-screen bg-slate-900 text-white">
-      <WebSocketTest i={1} />
-      <WebSocketTest i={2} />
+      <OwnerTest />
+      <ClientTest />
     </div>
   );
 }
