@@ -37,6 +37,7 @@ type Timer struct {
 func NewWebSocketServer() *WSServer {
 	return &WSServer{
 		clients:    make(map[*Client]bool),
+		timers:			make(map[string]*Timer),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		broadcast:  make(chan *Msg),
@@ -95,19 +96,27 @@ func (s *WSServer) handleClient(client *Client) {
 		splitted := strings.Split(message, ":")
 
 		version, err := strconv.ParseUint(splitted[0], 10, 64)
-		if err != nil || version != 1 {
+		if err != nil || len(splitted) < 3 {
+			log.Printf("client %v sent a malformed message: \"%s\"", client, message)
+			continue
+		}
+
+		if version != 1 {
+			log.Printf("client %v sent a cmd with unsupported version: %d", client, version)
 			continue
 		}
 
 		cmd := splitted[1]
-		timerId := splitted[2]
+		timerId := strings.ToUpper(splitted[2]);
 		// args := splitted[3:]
 
 		if len(timerId) != 6 {
+			log.Printf("client %v sent a cmd with a malformed timer id: \"%s\"", client, timerId)
 			continue
 		}
 
 		if cmd == "create" {
+			log.Printf("client %v created timer %s", client, timerId)
 			s.timers[timerId] = &Timer{
 				id:      timerId,
 				clients: make(map[*Client]bool),
@@ -127,33 +136,38 @@ func (s *WSServer) handleClient(client *Client) {
 		case "join":
 			if client != timer.owner {
 				timer.clients[client] = true
+				log.Printf("client %v joined timer %s", client, timerId)
 			}
 
 		case "leave":
 			if client != timer.owner {
 				delete(timer.clients, client)
+				log.Printf("client %v left timer %s", client, timerId)
 			}
 
 		case "start":
 			if client == timer.owner {
 				timer.running = true
-				timer.notifyRunning(true)
+				log.Printf("client %v started timer %s as owner", client, timerId)
+				go timer.notifyRunning(true)
 			}
 
 		case "pause":
 			if client == timer.owner {
 				timer.running = false
-				timer.notifyRunning(false)
+				log.Printf("owner %v paused timer %s as owner", client, timerId)
+				go timer.notifyRunning(false)
 			}
 
 		case "resume":
 			if client == timer.owner {
 				timer.running = true
-				timer.notifyRunning(false)
+				log.Printf("owner %v resumed timer %s as owner", client, timerId)
+				go timer.notifyRunning(false)
 			}
 
 		default:
-			log.Printf("Client %v tried to execute a not-found command: %s", client, cmd)
+			log.Printf("client %v tried to execute a not-found command: %s", client, cmd)
 		}
 	}
 }
