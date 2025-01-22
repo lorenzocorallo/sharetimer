@@ -3,12 +3,21 @@ import useWebSocket, { ReadyState } from "react-use-websocket";
 
 const url = "ws://localhost:8080/api/ws";
 type TimerState = "created" | "running" | "paused";
-const tempUserId = "client_test";
+
+function generateId(): string {
+  const characters = "abcdefghijklmnopqrstuvwxyz";
+  let result = "client_test_";
+  const charactersLength = characters.length;
+  for (let i = 0; i < 6; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
 
 export function ClientTest() {
   const { readyState, lastMessage, sendMessage } = useWebSocket(url, {
     onOpen: () => {
-      sendMessage(`1:cmd:auth:setid:${tempUserId}`);
+      sendMessage(`1:cmd:auth:setid:${generateId()}`);
     },
   });
   const open = readyState === ReadyState.OPEN;
