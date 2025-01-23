@@ -14,7 +14,7 @@ export const Route = createLazyFileRoute("/")({
 const triggerEventId = "triggerhomepageidinput";
 
 export function Index() {
-  const [createSelected, setCreateSelected] = useState<boolean>(true);
+  const [createSelected, setCreateSelected] = useState<boolean>(false);
   const [joinSelected, setJoinSelected] = useState<boolean>(false);
 
   const [duration, setDuration] = useState(0);
