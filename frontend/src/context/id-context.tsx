@@ -27,14 +27,20 @@ export function IdProvider({ children }: { children: ReactNode }) {
   const [isGuestMode, setIsGuestMode] = useState(false);
 
   useEffect(() => {
-    const local = localStorage.getItem(storageKey);
+    let local = localStorage.getItem(storageKey);
+    const sesh = sessionStorage.getItem(storageKey);
+
     if (!local) {
-      const generated = generateRandomId();
-      localStorage.setItem(storageKey, generated);
-      setLocalId(generated);
-      setId(generated);
-    } else {
+      local = generateRandomId();
+      localStorage.setItem(storageKey, local);
       setLocalId(local);
+    }
+
+    if (sesh) {
+      setIsGuestMode(true);
+      setId(sesh);
+    } else {
+      setIsGuestMode(false);
       setId(local);
     }
   }, []);
