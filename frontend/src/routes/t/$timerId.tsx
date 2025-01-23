@@ -14,7 +14,7 @@ type Timer = {
 export const Route = createFileRoute("/t/$timerId")({
   loader: async ({ params }) => {
     const res = await axios
-      .get(`http://localhost:8080/api/timer/${params.timerId}`)
+      .get(`http://localhost:8080/api/timer/${params.timerId.toUpperCase()}`)
       .catch(() => {
         throw redirect({ to: "/t/404" });
       });

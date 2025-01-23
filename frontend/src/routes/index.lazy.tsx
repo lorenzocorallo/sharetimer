@@ -1,4 +1,4 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { DurationInput } from "../components/duration-input";
@@ -20,6 +20,8 @@ export function Index() {
   const [duration, setDuration] = useState(0);
   const [id, setId] = useState<string | null>(null);
   const { clientId, isGuestMode, toggleGuestMode } = useClientId();
+
+  const navigate = useNavigate();
 
   function handleCreateSelect(): void {
     setCreateSelected((v) => !v);
@@ -45,7 +47,7 @@ export function Index() {
     }
 
     const { timerId } = res.data as { timerId: string };
-    console.log(timerId);
+    navigate({ to: "/t/$timerId", params: { timerId } });
   }
 
   async function handleJoin(): Promise<void> {
