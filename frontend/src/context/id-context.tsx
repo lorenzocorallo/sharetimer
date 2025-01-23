@@ -33,8 +33,8 @@ export function IdProvider({ children }: { children: ReactNode }) {
     if (!local) {
       local = generateRandomId();
       localStorage.setItem(storageKey, local);
-      setLocalId(local);
     }
+    setLocalId(local);
 
     if (sesh) {
       setIsGuestMode(true);

@@ -5,6 +5,10 @@ type Timer = {
   timerId: string;
   ownerId: string;
   duration: number;
+  lastPause: number;
+  timeInPause: number;
+  startTime: number;
+  isRunning: boolean;
 };
 
 export const Route = createFileRoute("/t/$timerId")({
@@ -15,6 +19,6 @@ export const Route = createFileRoute("/t/$timerId")({
         throw redirect({ to: "/t/404" });
       });
 
-    return JSON.parse(res.data) as Timer;
+    return res.data as Timer;
   },
 });
