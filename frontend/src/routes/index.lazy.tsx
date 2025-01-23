@@ -38,6 +38,7 @@ export function Index() {
   async function handleCreate(): Promise<void> {
     const res = await axios.post("http://localhost:8080/api/timer", {
       duration,
+      clientId,
     });
     if (res.status !== 200) {
       console.log(res.data);
@@ -74,7 +75,7 @@ export function Index() {
           <h2 className="text-4xl font-bold">Create a timer</h2>
           <DurationInput onDurationChange={setDuration} />
           <button
-            className="py-2 px-12 text-xl rounded-xl bg-green-700 hover:bg-green-600 disabled:bg-gray-700 disabled:hover:bg-gray-700 disabled:cursor-not-allowed"
+            className="py-2 px-12 text-xl rounded-xl bg-green-700 hover:bg-green-600 disabled:bg-gray-700 disabled:hover:bg-gray-700 disabled:cursor-not-allowed cursor-pointer"
             disabled={duration <= 0}
             onClick={handleCreate}
           >
@@ -100,7 +101,7 @@ export function Index() {
             focusTriggerEvent={triggerEventId}
           />
           <button
-            className="py-2 px-12 text-xl rounded-xl bg-green-700 hover:bg-green-600 disabled:bg-gray-700 disabled:hover:bg-gray-700 disabled:cursor-not-allowed"
+            className="py-2 px-12 text-xl rounded-xl bg-green-700 hover:bg-green-600 disabled:bg-gray-700 disabled:hover:bg-gray-700 disabled:cursor-not-allowed cursor-pointer"
             disabled={id === null}
             onClick={handleJoin}
           >

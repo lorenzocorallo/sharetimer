@@ -1,5 +1,5 @@
 // DurationInput.tsx
-import { useState, useRef, ChangeEvent, useEffect } from "react";
+import { useState, useRef, ChangeEvent } from "react";
 
 interface DurationInputProps {
   onDurationChange: (seconds: number) => void;
@@ -84,8 +84,6 @@ export const DurationInput: React.FC<DurationInputProps> = ({
     // Notify parent of the updated duration
     onDurationChange(totalSeconds * 1000);
   };
-
-  useEffect(() => console.log(digits), [digits]);
 
   return (
     <div className="relative w-[280px] font-roboto pt-[72px]">

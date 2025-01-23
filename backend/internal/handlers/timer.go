@@ -13,6 +13,14 @@ import (
 
 var ids = make([]string, 1024)
 
+type Timer struct {
+	TimerId  string `json:"timerId"`
+	OwnerId  string `json:"ownerId"`
+	Duration int64  `json:"duration"`
+}
+
+var timers = make(map[string]*Timer)
+
 func generateId() string {
 	const gen = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	for {
@@ -31,7 +39,8 @@ func generateId() string {
 }
 
 type TimerProps struct {
-	Duration int64 `json:"duration"`
+	Duration int64  `json:"duration"`
+	ClientId string `json:"clientId"`
 }
 
 func HandleCreateTimer(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +70,17 @@ func HandleCreateTimer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(data.ClientId) == 0 {
+		http.Error(w, "you must provide the clientId", http.StatusBadRequest)
+		return
+	}
+
 	id := generateId()
+	timer := &Timer{
+		TimerId: id,
+		OwnerId: data.ClientId,
+	}
+	timers[id] = timer
 	log.Printf("created new timer. duration %d. id '%s'", data.Duration, id)
 
 	// Send success response
@@ -72,9 +91,11 @@ func HandleCreateTimer(w http.ResponseWriter, r *http.Request) {
 func HandleGetTimer(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
+	timer := timers[id]
 
-	if slices.Contains(ids, id) {
-		w.WriteHeader(200)
+	if slices.Contains(ids, id) && timer != nil {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(timer)
 	} else {
 		w.WriteHeader(404)
 	}
