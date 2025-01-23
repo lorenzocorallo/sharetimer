@@ -7,7 +7,7 @@ import React, {
 } from "react";
 
 interface Props {
-  onChange?: (value: string) => void;
+  onChange?: (value: string | null) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -24,6 +24,12 @@ export const IdInput: React.FC<Props> = ({
     return value === "";
   });
 
+  function handleChange(newValues: string[]) {
+    setValues(newValues);
+    const joined = newValues.join("");
+    onChange?.(joined.length === 6 ? joined : null);
+  }
+
   const focusNext = (currentIndex: number) => {
     const nextIndex = currentIndex + 1;
     if (nextIndex < 6) {
@@ -38,7 +44,8 @@ export const IdInput: React.FC<Props> = ({
     }
   };
 
-  const handleFocusEmpty = (e: MouseEvent<HTMLInputElement>) => {
+  const handleInputClick = (e: MouseEvent<HTMLInputElement>) => {
+    // focus the first empty input or the last if all are filled
     e.preventDefault();
     if (firstEmptyIndex === -1) {
       inputRefs.current[5]?.focus();
@@ -47,21 +54,19 @@ export const IdInput: React.FC<Props> = ({
     }
   };
 
-  const handleChange = (
+  const handleInputChange = (
     index: number,
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const value = event.target.value.toUpperCase();
     if (value.length <= 1 && /^[A-Z]$/.test(value)) {
-
       // Allow input at the first empty position or before
       if (firstEmptyIndex === -1 || index <= firstEmptyIndex) {
         const newValues = [...values];
         newValues[index] = value;
-        setValues(newValues);
+        handleChange(newValues);
         if (index === 5) {
           event.target.blur();
-          onChange?.(newValues.join(""));
         } else {
           focusNext(index);
         }
@@ -69,7 +74,7 @@ export const IdInput: React.FC<Props> = ({
     }
   };
 
-  const handleKeyDown = (
+  const handleInputKeyDown = (
     index: number,
     event: KeyboardEvent<HTMLInputElement>,
   ) => {
@@ -80,27 +85,18 @@ export const IdInput: React.FC<Props> = ({
         focusPrevious(index);
         if (index > 0) {
           newValues[index - 1] = "";
-          setValues(newValues);
-          onChange?.(newValues.join(""));
+          handleChange(newValues);
         }
       } else {
         const newValues = [...values];
         newValues[index] = "";
-        setValues(newValues);
-        onChange?.(newValues.join(""));
-      }
-    } else if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusPrevious(index);
-    } else if (event.key === "ArrowRight") {
-      event.preventDefault();
-      if (index + 1 <= firstEmptyIndex || firstEmptyIndex === -1) {
-        focusNext(index);
+        handleChange(newValues);
       }
     }
   };
 
-  const handlePaste = (event: ClipboardEvent<HTMLInputElement>) => {
+
+  const handleInputPaste = (event: ClipboardEvent<HTMLInputElement>) => {
     event.preventDefault();
     const pastedText = event.clipboardData.getData("text").toUpperCase();
     const letters = pastedText.match(/[A-Z]/g) || [];
@@ -110,6 +106,7 @@ export const IdInput: React.FC<Props> = ({
       newValues[i] = letters[i];
     }
 
+    handleChange(newValues);
     setValues(newValues);
     onChange?.(newValues.join(""));
 
@@ -120,6 +117,7 @@ export const IdInput: React.FC<Props> = ({
       inputRefs.current[5]?.focus();
     }
   };
+
   return (
     <div
       className={`flex gap-2 items-center justify-center ${className}`}
@@ -133,11 +131,10 @@ export const IdInput: React.FC<Props> = ({
           type="text"
           maxLength={1}
           value={value}
-          onChange={(e) => handleChange(index, e)}
-          onKeyDown={(e) => handleKeyDown(index, e)}
-          //onClick={handleFocusEmpty}
-          onMouseDown={handleFocusEmpty}
-          onPaste={handlePaste}
+          onChange={(e) => handleInputChange(index, e)}
+          onKeyDown={(e) => handleInputKeyDown(index, e)}
+          onMouseDown={handleInputClick}
+          onPaste={handleInputPaste}
           disabled={disabled}
           className="w-12 h-12 text-center text-xl font-bold border-b border-slate-800 rounded-lg focus:rounded-b-none transition-all duration-300 focus:border-blue-500 outline-none uppercase bg-slate-800 disabled:bg-slate-700 disabled:text-gray-400 disabled:cursor-not-allowed"
           aria-label={`Letter ${index + 1}`}
