@@ -10,10 +10,12 @@ interface Props {
   onChange?: (value: string | null) => void;
   disabled?: boolean;
   className?: string;
+  focusTriggerEvent?: string;
 }
 
 export const IdInput: React.FC<Props> = ({
   onChange,
+  focusTriggerEvent,
   disabled = false,
   className = "",
 }) => {
@@ -23,6 +25,12 @@ export const IdInput: React.FC<Props> = ({
   const firstEmptyIndex = values.findIndex((value) => {
     return value === "";
   });
+
+  if (focusTriggerEvent) {
+    document.addEventListener(focusTriggerEvent, () => {
+      inputRefs.current[0]?.click();
+    });
+  }
 
   function handleChange(newValues: string[]) {
     setValues(newValues);
@@ -95,7 +103,6 @@ export const IdInput: React.FC<Props> = ({
     }
   };
 
-
   const handleInputPaste = (event: ClipboardEvent<HTMLInputElement>) => {
     event.preventDefault();
     const pastedText = event.clipboardData.getData("text").toUpperCase();
@@ -134,6 +141,7 @@ export const IdInput: React.FC<Props> = ({
           onChange={(e) => handleInputChange(index, e)}
           onKeyDown={(e) => handleInputKeyDown(index, e)}
           onMouseDown={handleInputClick}
+          onClick={handleInputClick}
           onPaste={handleInputPaste}
           disabled={disabled}
           className="w-12 h-12 text-center text-xl font-bold border-b border-slate-800 rounded-lg focus:rounded-b-none transition-all duration-300 focus:border-blue-500 outline-hidden uppercase bg-slate-800 disabled:bg-slate-700 disabled:text-gray-400 disabled:cursor-not-allowed"

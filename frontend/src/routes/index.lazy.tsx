@@ -11,6 +11,8 @@ export const Route = createLazyFileRoute("/")({
   component: Index,
 });
 
+const triggerEventId = "triggerhomepageidinput";
+
 export function Index() {
   const [createSelected, setCreateSelected] = useState<boolean>(true);
   const [joinSelected, setJoinSelected] = useState<boolean>(false);
@@ -25,7 +27,11 @@ export function Index() {
   }
 
   function handleJoinSelect(): void {
-    setJoinSelected((v) => !v);
+    setJoinSelected((v) => {
+      const newVal = !v;
+      if (newVal) document.dispatchEvent(new Event(triggerEventId));
+      return newVal;
+    });
     setCreateSelected(false);
   }
 
@@ -89,7 +95,10 @@ export function Index() {
         </button>
         <div className="flex flex-col gap-10 justify-start pt-[15vh] items-center overflow-hidden flex-1 bg-slate-900 rounded-t-3xl">
           <h2 className="text-4xl font-bold">Join a timer</h2>
-          <IdInput onChange={(v) => setId(v)} />
+          <IdInput
+            onChange={(v) => setId(v)}
+            focusTriggerEvent={triggerEventId}
+          />
           <button
             className="py-2 px-12 text-xl rounded-xl bg-green-700 hover:bg-green-600 disabled:bg-gray-700 disabled:hover:bg-gray-700 disabled:cursor-not-allowed"
             disabled={id === null}
