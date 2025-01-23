@@ -28,8 +28,8 @@ func main() {
 
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api").Subrouter()
-	api.HandleFunc("/timer", handlers.HandleCreate).Methods("POST")
-	// api.HandleFunc("/timer/{id}", getTimer).Methods("GET")
+	api.HandleFunc("/timer", handlers.HandleCreateTimer).Methods("POST")
+	api.HandleFunc("/timer/{id}", handlers.HandleGetTimer).Methods("GET")
 
 	ws := websocket.NewWebSocketServer()
 	go ws.Run()
