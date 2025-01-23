@@ -14,10 +14,12 @@
     "@tanstack/react-query": "^5.64.2",
     "@tanstack/react-router": "^1.97.14",
     "axios": "^1.7.9",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.473.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-use-websocket": "^4.11.1"
+    "react-use-websocket": "^4.11.1",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

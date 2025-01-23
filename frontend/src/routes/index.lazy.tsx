@@ -4,6 +4,8 @@ import { useState } from "react";
 import { DurationInput } from "../components/duration-input";
 import { IdInput } from "../components/id-input";
 import axios from "axios";
+import { useClientId } from "../context/id-context";
+import { cn } from "../lib/utils";
 
 export const Route = createLazyFileRoute("/")({
   component: Index,
@@ -15,6 +17,7 @@ export function Index() {
 
   const [duration, setDuration] = useState(0);
   const [id, setId] = useState<string | null>(null);
+  const { clientId, isGuestMode, toggleGuestMode } = useClientId();
 
   function handleCreateSelect(): void {
     setCreateSelected((v) => !v);
@@ -53,7 +56,7 @@ export function Index() {
       <div className="flex-1 flex flex-col overflow-hidden bg-green-800/50">
         <button
           onClick={handleCreateSelect}
-          className="flex justify-center items-center group transition-all shrink-0 w-full"
+          className="flex justify-center items-center group transition-all shrink-0 w-full cursor-pointer"
           style={{ height: createSelected ? "25%" : "100%" }}
         >
           <Plus
@@ -76,7 +79,7 @@ export function Index() {
       <div className="flex-1 flex flex-col overflow-hidden bg-blue-800/30">
         <button
           onClick={handleJoinSelect}
-          className="flex justify-center items-center group transition-all shrink-0 w-full"
+          className="flex justify-center items-center group transition-all shrink-0 w-full cursor-pointer"
           style={{ height: joinSelected ? "25%" : "100%" }}
         >
           <UsersRound
@@ -96,6 +99,28 @@ export function Index() {
           </button>
         </div>
       </div>
+      <button
+        className={cn(
+          "cursor-pointer bg-purple-600 px-8 py-2 rounded-t-xl absolute bottom-0 left-1/2 -translate-x-1/2 transition-all",
+          isGuestMode
+            ? "bg-purple-600"
+            : "bg-slate-800 hover:bg-slate-700 text-purple-300",
+        )}
+        onMouseDown={toggleGuestMode}
+      >
+        guest mode
+      </button>
+
+      {process.env.NODE_ENV === "development" && (
+        <p
+          className={cn(
+            "bg-purple-600 px-8 py-2 rounded-bl-xl absolute right-0 top-0",
+            isGuestMode ? "bg-purple-600" : "bg-slate-800 text-purple-300",
+          )}
+        >
+          {clientId}
+        </p>
+      )}
     </>
   );
 }

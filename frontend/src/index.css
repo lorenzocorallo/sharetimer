@@ -3,3 +3,15 @@
 @theme {
   --font-outfit: Outfit, sans-serif;
 }
+
+@layer components {
+  .bg-stripes {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--color-purple-800),
+      var(--color-purple-800) 10px,
+      var(--color-purple-600) 10px,
+      var(--color-purple-600) 20px
+    );
+  }
+}
