@@ -6,33 +6,36 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"slices"
+	"unicode"
 
 	"github.com/gorilla/mux"
+	"github.com/lorenzocorallo/sharetimer/internal/models"
+	"gorm.io/gorm"
 )
 
-var ids = make([]string, 1024)
-
-type Timer struct {
-	TimerId  string `json:"timerId"`
-	OwnerId  string `json:"ownerId"`
-	Duration int64  `json:"duration"`
+type TimerHandler struct {
+	db *gorm.DB
 }
 
-var timers = make(map[string]*Timer)
+func NewTimerHander(db *gorm.DB) *TimerHandler {
+	return &TimerHandler {
+		db: db,
+	}
+}
 
-func generateId() string {
+func (h *TimerHandler) generateId() string {
 	const gen = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	s := make([]byte, 6)
 	for {
-		s := make([]byte, 6, 6)
 		for i := 0; i < 6; i++ {
 			n := rand.Intn(len(gen))
 			s[i] = gen[n]
 		}
 		str := string(s)
 
-		if !slices.Contains(ids, str) {
-			ids = append(ids, str)
+		timer := &models.Timer{}
+		if err := h.db.Where("id = ?", str).First(timer).Error; err != nil {
+			// this id is free
 			return str
 		}
 	}
@@ -43,7 +46,7 @@ type TimerProps struct {
 	ClientId string `json:"clientId"`
 }
 
-func HandleCreateTimer(w http.ResponseWriter, r *http.Request) {
+func (h *TimerHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	// Read the request body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -75,28 +78,48 @@ func HandleCreateTimer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := generateId()
-	timer := &Timer{
-		TimerId: id,
-		OwnerId: data.ClientId,
+	id := h.generateId()
+	timer := models.Timer{
+		ID:          id,
+		OwnerId:     data.ClientId,
+		Duration:    data.Duration,
+		StartTime:   0,
+		LastPause:   0,
+		TimeInPause: 0,
+		IsRunning:   false,
 	}
-	timers[id] = timer
-	log.Printf("created new timer. duration %d. id '%s'", data.Duration, id)
+
+	h.db.Create(&timer)
+
+	log.Printf("client id '%s' created new timer with duration %d. timer id: '%s'", data.ClientId, data.Duration, id)
 
 	// Send success response
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"timerId": id})
 }
 
-func HandleGetTimer(w http.ResponseWriter, r *http.Request) {
+func (h *TimerHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	timer := timers[id]
-
-	if slices.Contains(ids, id) && timer != nil {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(timer)
-	} else {
-		w.WriteHeader(404)
+	if len(id) != 6 {
+		w.WriteHeader(400)
+		return
 	}
+
+	for _, char := range id {
+		if !unicode.IsLetter(char) {
+			w.WriteHeader(400)
+			return
+		}
+	}
+
+	timer := models.Timer{}
+	err := h.db.Where("id = ?", id).First(&timer).Error
+	if err != nil {
+		w.WriteHeader(404)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(timer)
 }

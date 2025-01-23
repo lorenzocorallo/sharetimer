@@ -24,12 +24,17 @@ func init() {
 
 func main() {
 	// Initialize database
-	database.InitDB()
+	db, err := database.InitDB()
+	if err != nil {
+		log.Fatal(err)
+	}
 
+
+	timerHandler := handlers.NewTimerHander(db)
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api").Subrouter()
-	api.HandleFunc("/timer", handlers.HandleCreateTimer).Methods("POST")
-	api.HandleFunc("/timer/{id}", handlers.HandleGetTimer).Methods("GET")
+	api.HandleFunc("/timer", timerHandler.HandleCreate).Methods("POST")
+	api.HandleFunc("/timer/{id}", timerHandler.HandleGet).Methods("GET")
 
 	ws := websocket.NewWebSocketServer()
 	go ws.Run()
