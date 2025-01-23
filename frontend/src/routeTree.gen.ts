@@ -13,32 +13,32 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as T404Import } from './routes/t/404'
+import { Route as TTimerIdImport } from './routes/t/$timerId'
 
 // Create Virtual Routes
 
-const NewLazyImport = createFileRoute('/new')()
-const JoinLazyImport = createFileRoute('/join')()
 const IndexLazyImport = createFileRoute('/')()
 
 // Create/Update Routes
-
-const NewLazyRoute = NewLazyImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() => import('./routes/new.lazy').then((d) => d.Route))
-
-const JoinLazyRoute = JoinLazyImport.update({
-  id: '/join',
-  path: '/join',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() => import('./routes/join.lazy').then((d) => d.Route))
 
 const IndexLazyRoute = IndexLazyImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const T404Route = T404Import.update({
+  id: '/t/404',
+  path: '/t/404',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const TTimerIdRoute = TTimerIdImport.update({
+  id: '/t/$timerId',
+  path: '/t/$timerId',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/t/$timerId.lazy').then((d) => d.Route))
 
 // Populate the FileRoutesByPath interface
 
@@ -51,18 +51,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexLazyImport
       parentRoute: typeof rootRoute
     }
-    '/join': {
-      id: '/join'
-      path: '/join'
-      fullPath: '/join'
-      preLoaderRoute: typeof JoinLazyImport
+    '/t/$timerId': {
+      id: '/t/$timerId'
+      path: '/t/$timerId'
+      fullPath: '/t/$timerId'
+      preLoaderRoute: typeof TTimerIdImport
       parentRoute: typeof rootRoute
     }
-    '/new': {
-      id: '/new'
-      path: '/new'
-      fullPath: '/new'
-      preLoaderRoute: typeof NewLazyImport
+    '/t/404': {
+      id: '/t/404'
+      path: '/t/404'
+      fullPath: '/t/404'
+      preLoaderRoute: typeof T404Import
       parentRoute: typeof rootRoute
     }
   }
@@ -72,42 +72,42 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
-  '/join': typeof JoinLazyRoute
-  '/new': typeof NewLazyRoute
+  '/t/$timerId': typeof TTimerIdRoute
+  '/t/404': typeof T404Route
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
-  '/join': typeof JoinLazyRoute
-  '/new': typeof NewLazyRoute
+  '/t/$timerId': typeof TTimerIdRoute
+  '/t/404': typeof T404Route
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
-  '/join': typeof JoinLazyRoute
-  '/new': typeof NewLazyRoute
+  '/t/$timerId': typeof TTimerIdRoute
+  '/t/404': typeof T404Route
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/join' | '/new'
+  fullPaths: '/' | '/t/$timerId' | '/t/404'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/join' | '/new'
-  id: '__root__' | '/' | '/join' | '/new'
+  to: '/' | '/t/$timerId' | '/t/404'
+  id: '__root__' | '/' | '/t/$timerId' | '/t/404'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
-  JoinLazyRoute: typeof JoinLazyRoute
-  NewLazyRoute: typeof NewLazyRoute
+  TTimerIdRoute: typeof TTimerIdRoute
+  T404Route: typeof T404Route
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
-  JoinLazyRoute: JoinLazyRoute,
-  NewLazyRoute: NewLazyRoute,
+  TTimerIdRoute: TTimerIdRoute,
+  T404Route: T404Route,
 }
 
 export const routeTree = rootRoute
@@ -121,18 +121,18 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/join",
-        "/new"
+        "/t/$timerId",
+        "/t/404"
       ]
     },
     "/": {
       "filePath": "index.lazy.tsx"
     },
-    "/join": {
-      "filePath": "join.lazy.tsx"
+    "/t/$timerId": {
+      "filePath": "t/$timerId.tsx"
     },
-    "/new": {
-      "filePath": "new.lazy.tsx"
+    "/t/404": {
+      "filePath": "t/404.tsx"
     }
   }
 }
