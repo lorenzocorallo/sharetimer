@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
+	ghandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/lorenzocorallo/sharetimer/internal/database"
+	"github.com/lorenzocorallo/sharetimer/internal/handlers"
 	"github.com/lorenzocorallo/sharetimer/internal/websocket"
 )
 
@@ -26,7 +28,7 @@ func main() {
 
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api").Subrouter()
-	// api.HandleFunc("/timer", createTimer).Methods("POST")
+	api.HandleFunc("/timer", handlers.HandleCreate).Methods("POST")
 	// api.HandleFunc("/timer/{id}", getTimer).Methods("GET")
 
 	ws := websocket.NewWebSocketServer()
@@ -44,28 +46,32 @@ func main() {
 		port = "8080"
 	}
 
+	corsHandler := ghandlers.CORS(
+		ghandlers.AllowedOrigins([]string{"*"}), // Allow all origins
+		ghandlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		ghandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	)(r)
 	log.Printf("Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	log.Fatal(http.ListenAndServe(":"+port, corsHandler))
 }
-
 
 // SPA handler to serve frontend
 type spaHandler struct {
-    staticPath string
-    indexPath  string
+	staticPath string
+	indexPath  string
 }
 
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    path := filepath.Join(h.staticPath, r.URL.Path)
+	path := filepath.Join(h.staticPath, r.URL.Path)
 
-    _, err := os.Stat(path)
-    if os.IsNotExist(err) {
-        http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
-        return
-    } else if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-    http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
+	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }

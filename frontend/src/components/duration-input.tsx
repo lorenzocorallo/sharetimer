@@ -77,7 +77,7 @@ export const DurationInput: React.FC<DurationInputProps> = ({
     setDigits(newDigits);
 
     // Notify parent of the updated duration
-    onDurationChange(totalSeconds);
+    onDurationChange(totalSeconds * 1000);
   };
 
   return (
