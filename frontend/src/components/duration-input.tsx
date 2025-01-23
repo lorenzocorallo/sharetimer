@@ -81,7 +81,7 @@ export const DurationInput: React.FC<DurationInputProps> = ({
   };
 
   return (
-    <div className="relative mx-4 my-4 w-[280px] font-roboto pt-[72px]">
+    <div className="relative w-[280px] font-roboto pt-[72px]">
       {/* Hidden input that handles all the logic */}
       <input
         ref={inputRef}
@@ -105,7 +105,7 @@ export const DurationInput: React.FC<DurationInputProps> = ({
 
       {/* Clickable overlay to focus the input */}
       <div
-        className="absolute inset-0 cursor-pointer h-[72px] bg-slate-800 rounded-xl overflow-hidden  peer-focus:cursor-text px-2 peer-focus:pointer-events-none"
+        className="absolute inset-0 cursor-pointer h-[72px] bg-slate-800 rounded-xl overflow-hidden  peer-focus:cursor-text px-2 peer-focus:pointer-events-none peer-focus:border border-blue-500"
         onClick={() => inputRef.current?.focus()}
       />
       <div className="flex pt-3 justify-between items-center gap-3">
