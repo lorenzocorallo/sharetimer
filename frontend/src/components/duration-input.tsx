@@ -1,5 +1,5 @@
 // DurationInput.tsx
-import { useState, useRef, ChangeEvent } from "react";
+import { useState, useRef, ChangeEvent, useEffect } from "react";
 
 interface DurationInputProps {
   onDurationChange: (seconds: number) => void;
@@ -21,12 +21,13 @@ export const DurationInput: React.FC<DurationInputProps> = ({
   const formatDisplay = (): string => {
     let str = "";
     const h = digits.slice(0, 2).join("");
-    if (h) str += h + ":";
+    if (h) str += h.padStart(2, "0") + ":";
     const m = digits.slice(2, 4).join("");
-    if (m) str += m + ":";
+    if (m) str += m.padStart(2, "0") + ":";
     const s = digits.slice(4, 6).join("") || "0";
-    if (s) str += s;
-    //return `${h}:${m}:${s}`;
+    if (s) str += s.padStart(2, "0");
+
+    if (str == "00") return "0";
 
     return str;
   };
@@ -69,9 +70,13 @@ export const DurationInput: React.FC<DurationInputProps> = ({
 
     // Update digits array
     const newDigits = [
-      ...newHours.toString().padStart(2, "0"),
-      ...newMinutes.toString().padStart(2, "0"),
-      ...newSeconds.toString().padStart(2, "0"),
+      ...(newHours > 0 ? newHours.toString().padStart(2, "0") : ["", ""]),
+      ...(newHours > 0 || newMinutes > 0
+        ? newMinutes.toString().padStart(2, "0")
+        : ["", ""]),
+      ...(newHours > 0 || newMinutes > 0 || newSeconds > 0
+        ? newSeconds.toString().padStart(2, "0")
+        : ["", ""]),
     ];
 
     setDigits(newDigits);
@@ -79,6 +84,8 @@ export const DurationInput: React.FC<DurationInputProps> = ({
     // Notify parent of the updated duration
     onDurationChange(totalSeconds * 1000);
   };
+
+  useEffect(() => console.log(digits), [digits]);
 
   return (
     <div className="relative w-[280px] font-roboto pt-[72px]">
@@ -109,9 +116,24 @@ export const DurationInput: React.FC<DurationInputProps> = ({
         onClick={() => inputRef.current?.focus()}
       />
       <div className="flex pt-3 justify-between items-center gap-3">
-        <button onClick={() => addTime(30 * 60)} className="py-1 flex-1 rounded-xl bg-slate-800">+30:00</button>
-        <button onClick={() => addTime(5 * 60)} className="py-1 flex-1 rounded-xl bg-slate-800">+5:00</button>
-        <button onClick={() => addTime(30)} className="py-1 flex-1 rounded-xl bg-slate-800">+0:30</button>
+        <button
+          onClick={() => addTime(30 * 60)}
+          className="py-1 flex-1 rounded-xl bg-slate-800 cursor-pointer"
+        >
+          +30:00
+        </button>
+        <button
+          onClick={() => addTime(5 * 60)}
+          className="py-1 flex-1 rounded-xl bg-slate-800 cursor-pointer"
+        >
+          +5:00
+        </button>
+        <button
+          onClick={() => addTime(30)}
+          className="py-1 flex-1 rounded-xl bg-slate-800 cursor-pointer"
+        >
+          +0:30
+        </button>
       </div>
     </div>
   );
