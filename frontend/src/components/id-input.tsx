@@ -136,7 +136,7 @@ export const IdInput: React.FC<Props> = ({
           onMouseDown={handleInputClick}
           onPaste={handleInputPaste}
           disabled={disabled}
-          className="w-12 h-12 text-center text-xl font-bold border-b border-slate-800 rounded-lg focus:rounded-b-none transition-all duration-300 focus:border-blue-500 outline-none uppercase bg-slate-800 disabled:bg-slate-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+          className="w-12 h-12 text-center text-xl font-bold border-b border-slate-800 rounded-lg focus:rounded-b-none transition-all duration-300 focus:border-blue-500 outline-hidden uppercase bg-slate-800 disabled:bg-slate-700 disabled:text-gray-400 disabled:cursor-not-allowed"
           aria-label={`Letter ${index + 1}`}
         />
       ))}
