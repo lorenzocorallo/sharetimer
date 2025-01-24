@@ -1,30 +1,114 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import useWebSocket, { ReadyState } from "react-use-websocket";
+import { Play, Pause } from "lucide-react";
+import { cn } from "../../lib/utils";
+import { parseWS, WSEvent } from "../../lib/api";
+import { useClientId } from "../../hooks/useClientId";
 
 export const Route = createLazyFileRoute("/t/$timerId")({
   component: RouteComponent,
 });
 
 function RouteComponent() {
+  const { clientId } = useClientId();
+  const { timer, wsUrl } = Route.useLoaderData();
+  const { readyState, lastMessage, sendMessage } = useWebSocket(wsUrl, {
+    onOpen: () => {
+      sendMessage(`1:cmd:auth:setid:${clientId}`);
+    },
+  });
   const {
-    id: _id,
+    timerId,
     duration,
     isOwner,
     isRunning: dbIsRunning,
     lastPause,
     startTime,
     timeInPause,
-  } = Route.useLoaderData();
+  } = timer;
+
   const [timeLeft, setTimeLeft] = useState<number>(
     startTime === 0 ? duration : calcTimeLeft(),
   );
-  const [_isStarted, setIsStarted] = useState<boolean>(startTime > 0);
+
+  const [isStarted, setIsStarted] = useState<boolean>(startTime > 0);
   const [isRunning, setIsRunning] = useState<boolean>(dbIsRunning);
+
+  const isWsOpen = readyState === ReadyState.OPEN;
+
+  const [_msgs, setMsgs] = useState<string[]>([]);
+  const [clients, setClients] = useState<number>(0);
 
   const percentage = ((duration - timeLeft) / duration) * 100;
 
+  function calcTimeLeft() {
+    if (isRunning) return duration - (Date.now() - startTime) + timeInPause;
+    return duration - (lastPause - startTime) + timeInPause;
+  }
+
   useEffect(() => {
-    if (!isRunning) return;
+    if (isWsOpen) {
+      if (isOwner) {
+        sendMessage(`1:cmd:timer:create:${timerId}`);
+      } else {
+        sendMessage(`1:cmd:timer:join:${timerId}`);
+      }
+    }
+  }, [isOwner, isWsOpen, sendMessage, timerId]);
+
+  function handleStart() {
+    if (!isOwner || !isWsOpen) return;
+    sendMessage(`1:cmd:timer:start:${timerId}`);
+    setIsStarted(true);
+    setIsRunning(true);
+  }
+
+  function handlePause() {
+    if (!isOwner || !isWsOpen) return;
+    sendMessage(`1:cmd:timer:pause:${timerId}`);
+    setIsRunning(false);
+    setTimeLeft((v) => v - (v % 1000));
+  }
+
+  function handleResume() {
+    if (!isOwner || !isWsOpen) return;
+    setIsRunning(true);
+    sendMessage(`1:cmd:timer:resume:${timerId}`);
+  }
+
+  const handleMessage = useCallback(
+    (msg: string) => {
+      const event = parseWS(timerId, msg);
+      if (event === null) return;
+
+      if (isOwner) {
+        if (event === WSEvent.Join) setClients((v) => v + 1);
+        if (event === WSEvent.Leave) setClients((v) => Math.max(v - 1, 0));
+      } else {
+        if (event === WSEvent.Start) {
+          setIsStarted(true);
+          setIsRunning(true);
+        }
+        if (event === WSEvent.Pause) {
+          setIsRunning(false);
+          setTimeLeft((v) => v - (v % 1000));
+        }
+        if (event === WSEvent.Resume) setIsRunning(true);
+      }
+    },
+    [isOwner, timerId],
+  );
+
+  useEffect(() => {
+    if (lastMessage) {
+      setMsgs((p) => [...p, lastMessage.data]);
+      handleMessage(lastMessage.data);
+    }
+  }, [handleMessage, lastMessage]);
+
+  useEffect(() => {
+    if (!isRunning || !isStarted) return;
     const interval = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 100) {
@@ -37,56 +121,45 @@ function RouteComponent() {
     }, 20);
 
     return () => clearInterval(interval);
-  }, [isRunning]);
-
-  function calcTimeLeft() {
-    if (isRunning) return duration - (Date.now() - startTime) + timeInPause;
-    return duration - (lastPause - startTime) + timeInPause;
-  }
-
-  function handleStart() {
-    if (!isOwner) return;
-    setIsStarted(true);
-    setIsRunning(true);
-  }
-
-  function handlePause() {
-    if (!isOwner) return;
-    setIsRunning(false);
-    setTimeLeft((v) => v - (v % 1000));
-  }
-
-  function handleResume() {
-    if (!isOwner) return;
-    setIsRunning(true);
-  }
+  }, [isRunning, isStarted]);
 
   return (
     <div className="w-full grid grid-rows-[4rem_1fr_4rem]">
-      <div className="border-b border-slate-700 flex items-center gap-4">
-        {isOwner && (
-          <>
-            <button className="cursor-pointer" onClick={handleStart}>
-              start
+      <div className="border-b border-slate-700 flex items-center justify-between gap-4 px-4">
+        <div className="flex-[0.5] flex justify-start items-center gap-4"></div>
+        {isOwner && isWsOpen && (
+          <div className="flex-1 flex justify-center items-center gap-4">
+            <button
+              onClick={isStarted ? handleResume : handleStart}
+              className={cn(
+                "p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-all duration-200 focus:outline-none cursor-pointer",
+                isStarted ? "px-2" : "px-12 hover:px-16",
+              )}
+              aria-label={isStarted ? "resume timer" : "start timer"}
+            >
+              <Play size={20} />
             </button>
 
-            <button
-              disabled={isRunning}
-              className="cursor-pointer"
-              onClick={handleResume}
-            >
-              resume
-            </button>
-
-            <button
-              disabled={!isRunning}
-              className="cursor-pointer"
-              onClick={handlePause}
-            >
-              pause
-            </button>
-          </>
+            {isStarted && (
+              <button
+                onClick={handlePause}
+                disabled={!isRunning}
+                className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors duration-200 focus:outline-none cursor-pointer"
+                aria-label={isStarted ? "resume timer" : "start timer"}
+              >
+                <Pause />
+              </button>
+            )}
+          </div>
         )}
+        <div className="flex-[0.5] flex justify-end items-center gap-4">
+          {isOwner && (
+            <p className="text-slate-200">
+              Clients connected:{" "}
+              <span className="text-white font-bold">{clients}</span>
+            </p>
+          )}
+        </div>
       </div>
       <div className="row-start-2 row-end-3 flex justify-center items-center py-10">
         <div className="relative w-auto h-full max-h-[80vw] xl:max-h-[50rem] aspect-square">

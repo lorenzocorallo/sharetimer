@@ -41,7 +41,7 @@ func main() {
 
 	ws := websocket.NewWebSocketServer()
 	go ws.Run()
-	api.HandleFunc("/ws", ws.HandleWebSocket)
+	r.HandleFunc("/ws", ws.HandleWebSocket)
 
 	// In production, serve static files
 	if os.Getenv("GO_ENV") == "production" {

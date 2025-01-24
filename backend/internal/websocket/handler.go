@@ -210,7 +210,6 @@ func (s *WSServer) handleTimerCmd(m *CmdMsg) {
 		if m.sender.id == timer.owner.id && m.sender.conn != timer.owner.conn {
 			timer.owner = m.sender
 		}
-
 		log.Printf("client id '%s' tried to create already existing timer with id: %s", m.sender.id, timerId)
 		return
 	}

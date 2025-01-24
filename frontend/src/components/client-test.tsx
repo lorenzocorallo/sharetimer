@@ -39,21 +39,6 @@ export function ClientTest() {
 
   const handleMessage = useCallback(
     (msg: string) => {
-      const [version, type, area, id, event] = msg.split(":");
-
-      if (
-        parseInt(version) !== 1 ||
-        type !== "event" ||
-        area !== "timer" ||
-        id !== timerId
-      )
-        return;
-
-      if (event === "resume" || event === "start") {
-        setTimerState("running");
-      } else if (event === "pause") {
-        setTimerState("paused");
-      }
     },
     [timerId],
   );
