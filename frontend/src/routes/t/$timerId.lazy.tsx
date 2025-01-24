@@ -7,9 +7,9 @@ export const Route = createLazyFileRoute("/t/$timerId")({
 
 function RouteComponent() {
   const {
-    //timerId,
+    id: _id,
     duration,
-    //ownerId,
+    isOwner,
     isRunning: dbIsRunning,
     lastPause,
     startTime,
@@ -18,7 +18,7 @@ function RouteComponent() {
   const [timeLeft, setTimeLeft] = useState<number>(
     startTime === 0 ? duration : calcTimeLeft(),
   );
-  const [isStarted, setIsStarted] = useState<boolean>(startTime > 0);
+  const [_isStarted, setIsStarted] = useState<boolean>(startTime > 0);
   const [isRunning, setIsRunning] = useState<boolean>(dbIsRunning);
 
   const percentage = ((duration - timeLeft) / duration) * 100;
@@ -45,49 +45,50 @@ function RouteComponent() {
   }
 
   function handleStart() {
+    if (!isOwner) return;
     setIsStarted(true);
     setIsRunning(true);
   }
 
   function handlePause() {
+    if (!isOwner) return;
     setIsRunning(false);
     setTimeLeft((v) => v - (v % 1000));
   }
 
   function handleResume() {
+    if (!isOwner) return;
     setIsRunning(true);
   }
 
   return (
     <div className="w-full grid grid-rows-[4rem_1fr_4rem]">
       <div className="border-b border-slate-700 flex items-center gap-4">
-        <button className="cursor-pointer" onClick={handleStart}>
-          start
-        </button>
+        {isOwner && (
+          <>
+            <button className="cursor-pointer" onClick={handleStart}>
+              start
+            </button>
 
-        <button
-          disabled={isRunning}
-          className="cursor-pointer"
-          onClick={handleResume}
-        >
-          resume
-        </button>
+            <button
+              disabled={isRunning}
+              className="cursor-pointer"
+              onClick={handleResume}
+            >
+              resume
+            </button>
 
-        <button
-          disabled={!isRunning}
-          className="cursor-pointer"
-          onClick={handlePause}
-        >
-          pause
-        </button>
+            <button
+              disabled={!isRunning}
+              className="cursor-pointer"
+              onClick={handlePause}
+            >
+              pause
+            </button>
+          </>
+        )}
       </div>
       <div className="row-start-2 row-end-3 flex justify-center items-center py-10">
-        {/*
-        <div className="rounded-full">
-        <p className="text-9xl">{formatTime(timeLeft / 1000)}</p>
-        </div>
-        */}
-
         <div className="relative w-auto h-full max-h-[80vw] xl:max-h-[50rem] aspect-square">
           {/* Background circle */}
           <div className="w-full h-full rounded-full bg-slate-700" />

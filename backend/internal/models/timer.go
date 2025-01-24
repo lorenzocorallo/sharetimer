@@ -5,7 +5,7 @@ import (
 )
 
 type Timer struct {
-	ID          string    `json:"id" gorm:"primaryKey"`
+	ID          string    `json:"timerId" gorm:"primaryKey"`
 	OwnerId     string    `json:"ownerId"`
 	Duration    int64     `json:"duration"`
 	StartTime   int64     `json:"startTime" gorm:"default:0"`

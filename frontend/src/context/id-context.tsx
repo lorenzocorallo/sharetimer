@@ -1,10 +1,6 @@
-import {
-  createContext,
-  useContext,
-  ReactNode,
-  useState,
-  useEffect,
-} from "react";
+import { createContext, ReactNode, useState, useEffect } from "react";
+import { clientIdKey } from "../constants.ts"
+import { generateRandomClientId } from "../lib/utils.ts";
 
 // Define the context type
 type IdContextType = {
@@ -14,25 +10,24 @@ type IdContextType = {
 };
 
 // Create context with a default value
-const IdContext = createContext<IdContextType>({
+export const IdContext = createContext<IdContextType>({
   clientId: "",
   isGuestMode: false,
   toggleGuestMode: () => {},
 });
 
-const storageKey = "sharetimer:id";
 export function IdProvider({ children }: { children: ReactNode }) {
   const [id, setId] = useState<string>("");
   const [localId, setLocalId] = useState<string>("");
   const [isGuestMode, setIsGuestMode] = useState(false);
 
   useEffect(() => {
-    let local = localStorage.getItem(storageKey);
-    const sesh = sessionStorage.getItem(storageKey);
+    let local = localStorage.getItem(clientIdKey);
+    const sesh = sessionStorage.getItem(clientIdKey);
 
     if (!local) {
-      local = generateRandomId();
-      localStorage.setItem(storageKey, local);
+      local = generateRandomClientId();
+      localStorage.setItem(clientIdKey, local);
     }
     setLocalId(local);
 
@@ -50,12 +45,12 @@ export function IdProvider({ children }: { children: ReactNode }) {
       // remove guest mode
       setId(localId);
       setIsGuestMode(false);
-      sessionStorage.removeItem(storageKey);
+      sessionStorage.removeItem(clientIdKey);
     } else {
-      const tempId = generateRandomId();
+      const tempId = generateRandomClientId();
       setId(tempId);
       setIsGuestMode(true);
-      sessionStorage.setItem(storageKey, tempId);
+      sessionStorage.setItem(clientIdKey, tempId);
     }
   }
 
@@ -64,24 +59,4 @@ export function IdProvider({ children }: { children: ReactNode }) {
       {children}
     </IdContext.Provider>
   );
-}
-
-export function useClientId() {
-  const context = useContext(IdContext);
-  if (context === undefined) {
-    throw new Error("useId must be used within an IdProvider");
-  }
-  return context;
-}
-
-function generateRandomId(length: number = 21): string {
-  // probability to get two identical is <0.0000004% => 1 / 250mln
-  const charset =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-
-  return Array.from(array)
-    .map((x) => charset[x % charset.length])
-    .join("");
 }

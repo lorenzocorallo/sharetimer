@@ -3,9 +3,9 @@ import { Plus, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { DurationInput } from "../components/duration-input";
 import { IdInput } from "../components/id-input";
-import axios from "axios";
-import { useClientId } from "../context/id-context";
 import { cn } from "../lib/utils";
+import { useClientId } from "../hooks/useClientId";
+import { createApi } from "../lib/api";
 
 export const Route = createLazyFileRoute("/")({
   component: Index,
@@ -20,8 +20,8 @@ export function Index() {
   const [duration, setDuration] = useState(0);
   const [id, setId] = useState<string | null>(null);
   const { clientId, isGuestMode, toggleGuestMode } = useClientId();
-
   const navigate = useNavigate();
+  const api = createApi(clientId);
 
   function handleCreateSelect(): void {
     setCreateSelected((v) => !v);
@@ -38,10 +38,7 @@ export function Index() {
   }
 
   async function handleCreate(): Promise<void> {
-    const res = await axios.post("http://localhost:8080/api/timer", {
-      duration,
-      clientId,
-    });
+    const res = await api.post("/timer", { duration });
     if (res.status !== 200) {
       console.log(res.data);
     }
@@ -51,10 +48,11 @@ export function Index() {
   }
 
   async function handleJoin(): Promise<void> {
+    if (!id) return;
     try {
-      const res = await axios.get(`http://localhost:8080/api/timer/${id}`);
-      alert(res.status === 200 ? "found" : "not-found");
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const res = await api.get(`/timer/${id}`);
+      if (res.status !== 200) alert("not-found");
+      navigate({ to: "/t/$timerId", params: { timerId: id } });
     } catch (_) {
       alert("not-found");
     }

@@ -6,9 +6,11 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"time"
 	"unicode"
 
 	"github.com/gorilla/mux"
+	"github.com/lorenzocorallo/sharetimer/internal/ctx"
 	"github.com/lorenzocorallo/sharetimer/internal/models"
 	"gorm.io/gorm"
 )
@@ -18,7 +20,7 @@ type TimerHandler struct {
 }
 
 func NewTimerHander(db *gorm.DB) *TimerHandler {
-	return &TimerHandler {
+	return &TimerHandler{
 		db: db,
 	}
 }
@@ -42,8 +44,7 @@ func (h *TimerHandler) generateId() string {
 }
 
 type TimerProps struct {
-	Duration int64  `json:"duration"`
-	ClientId string `json:"clientId"`
+	Duration int64 `json:"duration"`
 }
 
 func (h *TimerHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +62,9 @@ func (h *TimerHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	clientId := r.Context().Value(ctx.Keys.ClientID).(string)
+	log.Printf("client has id: %s", clientId)
+
 	// Check if body is valid JSON and matches your struct
 	var data TimerProps
 	if err := json.Unmarshal(body, &data); err != nil {
@@ -73,15 +77,10 @@ func (h *TimerHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(data.ClientId) == 0 {
-		http.Error(w, "you must provide the clientId", http.StatusBadRequest)
-		return
-	}
-
 	id := h.generateId()
 	timer := models.Timer{
 		ID:          id,
-		OwnerId:     data.ClientId,
+		OwnerId:     clientId,
 		Duration:    data.Duration,
 		StartTime:   0,
 		LastPause:   0,
@@ -91,11 +90,24 @@ func (h *TimerHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	h.db.Create(&timer)
 
-	log.Printf("client id '%s' created new timer with duration %d. timer id: '%s'", data.ClientId, data.Duration, id)
+	log.Printf("client id '%s' created new timer with duration %d. timer id: '%s'", clientId, data.Duration, id)
 
 	// Send success response
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"timerId": id})
+}
+
+// omit the ownerId to avoid privilage escalation client-side
+type TimerResponse struct {
+	ID          string    `json:"timerId"`
+	IsOwner     bool      `json:"isOwner"`
+	Duration    int64     `json:"duration"`
+	StartTime   int64     `json:"startTime"`
+	LastPause   int64     `json:"lastPause"`
+	TimeInPause int64     `json:"timeInPause"`
+	IsRunning   bool      `json:"isRunning"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 func (h *TimerHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +132,18 @@ func (h *TimerHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	clientId := r.Context().Value(ctx.Keys.ClientID).(string)
+	timerResponse := TimerResponse{
+		ID:          timer.ID,
+		IsOwner:     timer.OwnerId == clientId,
+		Duration:    timer.Duration,
+		StartTime:   timer.StartTime,
+		LastPause:   timer.LastPause,
+		TimeInPause: timer.TimeInPause,
+		IsRunning:   timer.IsRunning,
+		CreatedAt:   timer.CreatedAt,
+		UpdatedAt:   timer.UpdatedAt,
+	}
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(timer)
+	json.NewEncoder(w).Encode(timerResponse)
 }
