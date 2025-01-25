@@ -29,7 +29,11 @@ function RouteComponent() {
   } = timer;
 
   const [timeLeft, setTimeLeft] = useState<number>(
-    startTime === 0 ? duration : calcTimeLeft(),
+    startTime === 0
+      ? duration
+      : dbIsRunning
+        ? duration - (Date.now() - startTime) + timeInPause
+        : duration - (lastPause - startTime) + timeInPause,
   );
 
   const [isStarted, setIsStarted] = useState<boolean>(startTime > 0);
@@ -42,11 +46,6 @@ function RouteComponent() {
 
   const percentage = ((duration - timeLeft) / duration) * 100;
 
-  function calcTimeLeft() {
-    if (isRunning) return duration - (Date.now() - startTime) + timeInPause;
-    return duration - (lastPause - startTime) + timeInPause;
-  }
-
   useEffect(() => {
     if (isWsOpen) {
       if (isOwner) {
@@ -58,29 +57,31 @@ function RouteComponent() {
   }, [isOwner, isWsOpen, sendMessage, timerId]);
 
   function handleStart() {
-    if (!isOwner || !isWsOpen) return;
+    if (!isOwner || !isWsOpen || timeLeft === 0) return;
     sendMessage(`1:cmd:timer:start:${timerId}`);
     setIsStarted(true);
     setIsRunning(true);
   }
 
   function handlePause() {
-    if (!isOwner || !isWsOpen) return;
+    if (!isOwner || !isWsOpen || timeLeft === 0) return;
     sendMessage(`1:cmd:timer:pause:${timerId}`);
+    //sendMessage(`1:cmd:timer:sync:${timerId}:${timeLeft}`);
     setIsRunning(false);
-    setTimeLeft((v) => v - (v % 1000));
   }
 
   function handleResume() {
-    if (!isOwner || !isWsOpen) return;
+    if (!isOwner || !isWsOpen || timeLeft === 0) return;
     setIsRunning(true);
     sendMessage(`1:cmd:timer:resume:${timerId}`);
   }
 
   const handleMessage = useCallback(
     (msg: string) => {
-      const event = parseWS(timerId, msg);
-      if (event === null) return;
+      const parsed = parseWS(timerId, msg);
+      console.log(parsed)
+      if (parsed === null) return;
+      const [event, _args] = parsed;
 
       if (isOwner) {
         if (event === WSEvent.Join) setClients((v) => v + 1);
@@ -92,9 +93,9 @@ function RouteComponent() {
         }
         if (event === WSEvent.Pause) {
           setIsRunning(false);
-          setTimeLeft((v) => v - (v % 1000));
         }
         if (event === WSEvent.Resume) setIsRunning(true);
+        //if (event === WSEvent.Sync && args[0]) setTimeLeft(parseInt(args[0]));
       }
     },
     [isOwner, timerId],

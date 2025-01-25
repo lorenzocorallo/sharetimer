@@ -39,7 +39,7 @@ func main() {
 	api.HandleFunc("/timer", timerHandler.HandleCreate).Methods("POST")
 	api.HandleFunc("/timer/{id}", timerHandler.HandleGet).Methods("GET")
 
-	ws := websocket.NewWebSocketServer()
+	ws := websocket.NewWebSocketServer(db)
 	go ws.Run()
 	r.HandleFunc("/ws", ws.HandleWebSocket)
 

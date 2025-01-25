@@ -21,7 +21,7 @@ export function Index() {
   const [id, setId] = useState<string | null>(null);
   const { clientId, isGuestMode, toggleGuestMode } = useClientId();
   const navigate = useNavigate();
-  const api = createApi(clientId);
+  const { api } = createApi(clientId);
 
   function handleCreateSelect(): void {
     setCreateSelected((v) => !v);

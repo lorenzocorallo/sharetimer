@@ -7,8 +7,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/lorenzocorallo/sharetimer/internal/models"
+	"gorm.io/gorm"
 )
 
 type Client struct {
@@ -17,6 +20,7 @@ type Client struct {
 }
 
 type WSServer struct {
+	db         *gorm.DB
 	clients    map[*Client]bool
 	ids        map[string]*Client
 	timers     map[string]*Timer
@@ -40,8 +44,9 @@ type CmdMsg struct {
 	args    []string
 }
 
-func NewWebSocketServer() *WSServer {
+func NewWebSocketServer(db *gorm.DB) *WSServer {
 	return &WSServer{
+		db:         db,
 		clients:    make(map[*Client]bool),
 		ids:        make(map[string]*Client),
 		timers:     make(map[string]*Timer),
@@ -178,6 +183,7 @@ func (s *WSServer) handleAuthCmd(m *CmdMsg) {
 }
 
 func (s *WSServer) handleTimerCmd(m *CmdMsg) {
+	now := time.Now().UnixMilli()
 	if m.area != "timer" {
 		log.Fatalf("ERROR: this message should not be handled here. msg: '%s'", m.raw)
 		return
@@ -214,6 +220,15 @@ func (s *WSServer) handleTimerCmd(m *CmdMsg) {
 		return
 	}
 
+	dbTimer := models.Timer{}
+	if timer != nil {
+		err := s.db.Where("id = ?", timer.id).First(&dbTimer).Error
+		if err != nil {
+			log.Printf("ERROR: can't get timer id '%s' from the db", timer.id)
+			return
+		}
+	}
+
 	switch m.cmd {
 	case "create":
 		log.Printf("client id '%s' created timer %s", m.sender.id, timerId)
@@ -242,6 +257,15 @@ func (s *WSServer) handleTimerCmd(m *CmdMsg) {
 
 	case "start":
 		if m.sender.id == timer.owner.id {
+			dbTimer.IsRunning = true
+			dbTimer.StartTime = now
+
+			err := s.db.Save(&dbTimer).Error
+			if err != nil {
+				log.Printf("WARN: on 'pause' can't update timer id '%s'", timer.id)
+				log.Print(err)
+			}
+
 			timer.running = true
 			log.Printf("client id '%s' started timer %s as owner", m.sender.id, timerId)
 			timer.sendEvent("start")
@@ -249,6 +273,15 @@ func (s *WSServer) handleTimerCmd(m *CmdMsg) {
 
 	case "pause":
 		if m.sender.id == timer.owner.id {
+			dbTimer.IsRunning = false
+			dbTimer.LastPause = now
+
+			err := s.db.Save(&dbTimer).Error
+			if err != nil {
+				log.Printf("WARN: on 'pause' can't update timer id '%s'", timer.id)
+				log.Print(err)
+			}
+
 			timer.running = false
 			log.Printf("owner %v paused timer %s as owner", m.sender.id, timerId)
 			timer.sendEvent("pause")
@@ -256,6 +289,15 @@ func (s *WSServer) handleTimerCmd(m *CmdMsg) {
 
 	case "resume":
 		if m.sender.id == timer.owner.id {
+			dbTimer.TimeInPause += (now - dbTimer.LastPause)
+			dbTimer.IsRunning = true
+
+			err := s.db.Save(&dbTimer).Error
+			if err != nil {
+				log.Printf("WARN: on 'resume' can't update timer id '%s'", timer.id)
+				log.Print(err)
+			}
+
 			timer.running = true
 			log.Printf("owner %v resumed timer %s as owner", m.sender.id, timerId)
 			timer.sendEvent("resume")
