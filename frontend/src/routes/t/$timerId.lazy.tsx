@@ -10,6 +10,8 @@ export const Route = createLazyFileRoute("/t/$timerId")({
   component: RouteComponent,
 });
 
+const strokeWidth = 2;
+
 function RouteComponent() {
   const { clientId } = useClientId();
   const { timer, wsUrl } = Route.useLoaderData();
@@ -38,13 +40,15 @@ function RouteComponent() {
 
   const [isStarted, setIsStarted] = useState<boolean>(startTime > 0);
   const [isRunning, setIsRunning] = useState<boolean>(dbIsRunning);
+  const isEnded = timeLeft === 0;
+  const isPaused = isStarted && !isRunning;
 
   const isWsOpen = readyState === ReadyState.OPEN;
 
   const [_msgs, setMsgs] = useState<string[]>([]);
   const [clients, setClients] = useState<number>(0);
 
-  const percentage = ((duration - timeLeft) / duration) * 100;
+  const percentage = (timeLeft / duration) * 100;
 
   useEffect(() => {
     if (isWsOpen) {
@@ -57,21 +61,21 @@ function RouteComponent() {
   }, [isOwner, isWsOpen, sendMessage, timerId]);
 
   function handleStart() {
-    if (!isOwner || !isWsOpen || timeLeft === 0) return;
+    if (!isOwner || !isWsOpen || isEnded) return;
     sendMessage(`1:cmd:timer:start:${timerId}`);
     setIsStarted(true);
     setIsRunning(true);
   }
 
   function handlePause() {
-    if (!isOwner || !isWsOpen || timeLeft === 0) return;
+    if (!isOwner || !isWsOpen || isEnded || isPaused) return;
     sendMessage(`1:cmd:timer:pause:${timerId}`);
     //sendMessage(`1:cmd:timer:sync:${timerId}:${timeLeft}`);
     setIsRunning(false);
   }
 
   function handleResume() {
-    if (!isOwner || !isWsOpen || timeLeft === 0) return;
+    if (!isOwner || !isWsOpen || isEnded || !isPaused) return;
     setIsRunning(true);
     sendMessage(`1:cmd:timer:resume:${timerId}`);
   }
@@ -79,7 +83,7 @@ function RouteComponent() {
   const handleMessage = useCallback(
     (msg: string) => {
       const parsed = parseWS(timerId, msg);
-      console.log(parsed)
+      console.log(parsed);
       if (parsed === null) return;
       const [event, _args] = parsed;
 
@@ -124,6 +128,10 @@ function RouteComponent() {
     return () => clearInterval(interval);
   }, [isRunning, isStarted]);
 
+  const radius = 50 - strokeWidth / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = ((100 - percentage) / 100) * circumference;
+
   return (
     <div className="w-full grid grid-rows-[4rem_1fr_4rem]">
       <div className="border-b border-slate-700 flex items-center justify-between gap-4 px-4">
@@ -131,8 +139,8 @@ function RouteComponent() {
         {isOwner && isWsOpen && (
           <div className="flex-1 flex justify-center items-center gap-4">
             <button
-              onClick={isStarted ? handleResume : handleStart}
-              disabled={isRunning}
+              onClick={isPaused ? handleResume : handleStart}
+              disabled={isEnded || isRunning}
               className={cn(
                 "p-2 rounded-full bg-slate-800 not-disabled:hover:bg-slate-700 transition-all duration-200 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-800 disabled:text-gray-600",
                 isStarted ? "px-2" : "px-12 hover:px-16",
@@ -145,7 +153,7 @@ function RouteComponent() {
             {isStarted && (
               <button
                 onClick={handlePause}
-                disabled={!isRunning}
+                disabled={isEnded || isPaused}
                 className="p-2 rounded-full bg-slate-800 not-disabled:hover:bg-slate-700 transition-colors duration-200 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-800 disabled:text-gray-600"
                 aria-label={isStarted ? "resume timer" : "start timer"}
               >
@@ -163,26 +171,57 @@ function RouteComponent() {
           )}
         </div>
       </div>
-      <div className="row-start-2 row-end-3 flex justify-center items-center py-10">
+      <div
+        className={cn(
+          "row-start-2 row-end-3 flex justify-center items-center py-10 bg-slate-900",
+          isPaused ? "bg-yellow-600/20" : "",
+          isEnded ? "bg-red-600/20" : "",
+        )}
+      >
         <div className="relative w-auto h-full max-h-[80vw] xl:max-h-[50rem] aspect-square">
-          {/* Background circle */}
-          <div className="w-full h-full rounded-full bg-slate-700" />
-
-          {/* Progress circle */}
-          <div
-            className="absolute top-0 left-0 w-full h-full"
-            style={{
-              background: `conic-gradient(#4285f4 ${100 - percentage}%, transparent ${100 - percentage}%)`,
-              borderRadius: "50%",
-            }}
-          />
-
-          {/* Inner white circle with time display */}
-          <div className="absolute top-2 left-2 right-2 bottom-2 bg-slate-900 rounded-full flex items-center justify-center">
+          <svg
+            className="w-full h-full -rotate-90"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Background circle */}
+            <circle
+              className={cn(
+                "text-slate-700",
+                isPaused ? "text-yellow-900" : "",
+                isEnded ? "text-red-900" : "",
+              )}
+              stroke="currentColor"
+              fill="none"
+              strokeWidth={strokeWidth}
+              r={radius}
+              cx="50"
+              cy="50"
+            />
+            {/* Progress circle */}
+            <circle
+              className={cn(
+                "text-blue-500",
+                isPaused ? "text-yellow-300" : "",
+                isEnded ? "text-red-900" : "",
+              )}
+              stroke="currentColor"
+              fill="none"
+              strokeWidth={strokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              r={radius}
+              cx="50"
+              cy="50"
+            />
+          </svg>
+          {/* Timer display */}
+          <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-5xl md:text-8xl font-semibold">
               {formatTime(timeLeft / 1000)}
             </span>
-          </div>
+          </div>{" "}
         </div>
       </div>
       <div className="border-t border-slate-700"></div>
