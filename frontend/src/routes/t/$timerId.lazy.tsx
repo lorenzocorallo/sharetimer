@@ -132,8 +132,9 @@ function RouteComponent() {
           <div className="flex-1 flex justify-center items-center gap-4">
             <button
               onClick={isStarted ? handleResume : handleStart}
+              disabled={isRunning}
               className={cn(
-                "p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-all duration-200 focus:outline-none cursor-pointer",
+                "p-2 rounded-full bg-slate-800 not-disabled:hover:bg-slate-700 transition-all duration-200 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-800 disabled:text-gray-600",
                 isStarted ? "px-2" : "px-12 hover:px-16",
               )}
               aria-label={isStarted ? "resume timer" : "start timer"}
@@ -145,7 +146,7 @@ function RouteComponent() {
               <button
                 onClick={handlePause}
                 disabled={!isRunning}
-                className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition-colors duration-200 focus:outline-none cursor-pointer"
+                className="p-2 rounded-full bg-slate-800 not-disabled:hover:bg-slate-700 transition-colors duration-200 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-800 disabled:text-gray-600"
                 aria-label={isStarted ? "resume timer" : "start timer"}
               >
                 <Pause />
