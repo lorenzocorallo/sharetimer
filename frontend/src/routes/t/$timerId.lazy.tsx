@@ -5,12 +5,11 @@ import { Play, Pause } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { parseWS, WSEvent } from "../../lib/api";
 import { useClientId } from "../../hooks/useClientId";
+import { Timer } from "../../components/timer";
 
 export const Route = createLazyFileRoute("/t/$timerId")({
   component: RouteComponent,
 });
-
-const strokeWidth = 2;
 
 function RouteComponent() {
   const { clientId } = useClientId();
@@ -30,25 +29,22 @@ function RouteComponent() {
     timeInPause,
   } = timer;
 
-  const [timeLeft, setTimeLeft] = useState<number>(
+  const initialTime =
     startTime === 0
       ? duration
       : dbIsRunning
         ? duration - (Date.now() - startTime) + timeInPause
-        : duration - (lastPause - startTime) + timeInPause,
-  );
+        : duration - (lastPause - startTime) + timeInPause;
 
   const [isStarted, setIsStarted] = useState<boolean>(startTime > 0);
   const [isRunning, setIsRunning] = useState<boolean>(dbIsRunning);
-  const isEnded = timeLeft === 0;
+  const [isEnded, setIsEnded] = useState<boolean>(false);
   const isPaused = isStarted && !isRunning;
 
   const isWsOpen = readyState === ReadyState.OPEN;
 
   const [_msgs, setMsgs] = useState<string[]>([]);
   const [clients, setClients] = useState<number>(0);
-
-  const percentage = (timeLeft / duration) * 100;
 
   useEffect(() => {
     if (isWsOpen) {
@@ -112,25 +108,10 @@ function RouteComponent() {
     }
   }, [handleMessage, lastMessage]);
 
-  useEffect(() => {
-    if (!isRunning || !isStarted) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 100) {
-          clearInterval(interval);
-          setIsRunning(false);
-          return 0;
-        }
-        return prevTime - 20;
-      });
-    }, 20);
-
-    return () => clearInterval(interval);
-  }, [isRunning, isStarted]);
-
-  const radius = 50 - strokeWidth / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = ((100 - percentage) / 100) * circumference;
+  function handleEnd() {
+    setIsRunning(false);
+    setIsEnded(true);
+  }
 
   return (
     <div className="w-full grid grid-rows-[4rem_1fr_4rem]">
@@ -178,75 +159,16 @@ function RouteComponent() {
           isEnded ? "bg-red-600/20" : "",
         )}
       >
-        <div className="relative w-auto h-full max-h-[80vw] xl:max-h-[50rem] aspect-square">
-          <svg
-            className="w-full h-full -rotate-90"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            {/* Background circle */}
-            <circle
-              className={cn(
-                "text-slate-700",
-                isPaused ? "text-yellow-900" : "",
-                isEnded ? "text-red-900" : "",
-              )}
-              stroke="currentColor"
-              fill="none"
-              strokeWidth={strokeWidth}
-              r={radius}
-              cx="50"
-              cy="50"
-            />
-            {/* Progress circle */}
-            <circle
-              className={cn(
-                "text-blue-500",
-                isPaused ? "text-yellow-300" : "",
-                isEnded ? "text-red-900" : "",
-              )}
-              stroke="currentColor"
-              fill="none"
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              r={radius}
-              cx="50"
-              cy="50"
-            />
-          </svg>
-          {/* Timer display */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-5xl md:text-8xl font-semibold">
-              {formatTime(timeLeft / 1000)}
-            </span>
-          </div>{" "}
-        </div>
+        <Timer
+          isStarted={isStarted}
+          isEnded={isEnded}
+          isPaused={isPaused}
+          duration={duration}
+          initialTime={initialTime}
+          onEnd={handleEnd}
+        />
       </div>
       <div className="border-t border-slate-700"></div>
     </div>
   );
-}
-
-function formatTime(timeInSeconds: number): string {
-  const hours = Math.floor(timeInSeconds / 3600);
-  const minutes = Math.floor((timeInSeconds % 3600) / 60);
-  const seconds = Math.floor(timeInSeconds % 60);
-
-  const h = hours.toString().padStart(2, "0");
-  const m = minutes.toString().padStart(2, "0");
-  const s = seconds.toString().padStart(2, "0");
-
-  if (hours > 0) {
-    return `${h}:${m}:${s}`;
-  }
-  if (minutes > 0) {
-    return `${m}:${s}`;
-  }
-  if (seconds > 0) {
-    return `00:${s}`;
-  }
-
-  return "00:00";
 }
