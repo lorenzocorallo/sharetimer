@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useState, useEffect } from "react";
-import { clientIdKey } from "../constants.ts"
+import { clientIdKey } from "../constants.ts";
 import { generateRandomClientId } from "../lib/utils.ts";
 
 // Define the context type
@@ -17,6 +17,7 @@ export const IdContext = createContext<IdContextType>({
 });
 
 export function IdProvider({ children }: { children: ReactNode }) {
+  const isDev = process.env.NODE_ENV === "development";
   const [id, setId] = useState<string>("");
   const [localId, setLocalId] = useState<string>("");
   const [isGuestMode, setIsGuestMode] = useState(false);
@@ -31,16 +32,17 @@ export function IdProvider({ children }: { children: ReactNode }) {
     }
     setLocalId(local);
 
-    if (sesh) {
+    if (sesh && isDev) {
       setIsGuestMode(true);
       setId(sesh);
     } else {
       setIsGuestMode(false);
       setId(local);
     }
-  }, []);
+  }, [isDev]);
 
   function toggleGuestMode() {
+    if (!isDev) return;
     if (isGuestMode) {
       // remove guest mode
       setId(localId);

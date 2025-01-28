@@ -16,6 +16,7 @@ const triggerEventId = "triggerhomepageidinput";
 export function Index() {
   const [createSelected, setCreateSelected] = useState<boolean>(false);
   const [joinSelected, setJoinSelected] = useState<boolean>(false);
+  const isDev = process.env.NODE_ENV === "development";
 
   const [duration, setDuration] = useState(0);
   const [id, setId] = useState<string | null>(null);
@@ -109,27 +110,29 @@ export function Index() {
           </button>
         </div>
       </div>
-      <button
-        className={cn(
-          "cursor-pointer bg-purple-600 px-8 py-2 rounded-t-xl absolute bottom-0 left-1/2 -translate-x-1/2 transition-all",
-          isGuestMode
-            ? "bg-purple-600"
-            : "bg-slate-800 hover:bg-slate-700 text-purple-300",
-        )}
-        onMouseDown={toggleGuestMode}
-      >
-        guest mode
-      </button>
 
-      {process.env.NODE_ENV === "development" && (
-        <p
-          className={cn(
-            "bg-purple-600 px-8 py-2 rounded-bl-xl absolute right-0 top-0",
-            isGuestMode ? "bg-purple-600" : "bg-slate-800 text-purple-300",
-          )}
-        >
-          {clientId}
-        </p>
+      {isDev && (
+        <>
+          <button
+            className={cn(
+              "cursor-pointer bg-purple-600 px-8 py-2 rounded-t-xl absolute bottom-0 left-1/2 -translate-x-1/2 transition-all",
+              isGuestMode
+                ? "bg-purple-600"
+                : "bg-slate-800 hover:bg-slate-700 text-purple-300",
+            )}
+            onMouseDown={toggleGuestMode}
+          >
+            guest mode
+          </button>
+          <p
+            className={cn(
+              "bg-purple-600 px-8 py-2 rounded-bl-xl absolute right-0 top-0",
+              isGuestMode ? "bg-purple-600" : "bg-slate-800 text-purple-300",
+            )}
+          >
+            {clientId}
+          </p>
+        </>
       )}
     </>
   );
