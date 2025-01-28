@@ -49,7 +49,24 @@ export const DurationInput: React.FC<DurationInputProps> = ({
     const minutes = parseInt(digits.slice(2, 4).join("") || "0");
     const seconds = parseInt(digits.slice(4, 6).join("") || "0");
 
-    onDurationChange((hours * 3600 + minutes * 60 + seconds) * 1000);
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+    const newHours = Math.floor(totalSeconds / 3600);
+    const newMinutes = Math.floor((totalSeconds % 3600) / 60);
+    const newSeconds = totalSeconds % 60;
+
+    const newDigits = [
+      ...(newHours > 0 ? newHours.toString().padStart(2, "0") : ["", ""]),
+      ...(newHours > 0 || newMinutes > 0
+        ? newMinutes.toString().padStart(2, "0")
+        : ["", ""]),
+      ...(newHours > 0 || newMinutes > 0 || newSeconds > 0
+        ? newSeconds.toString().padStart(2, "0")
+        : ["", ""]),
+    ];
+
+    setDigits(newDigits);
+    onDurationChange(totalSeconds * 1000);
   };
 
   const addTime = (secondsToAdd: number) => {
@@ -80,8 +97,6 @@ export const DurationInput: React.FC<DurationInputProps> = ({
     ];
 
     setDigits(newDigits);
-
-    // Notify parent of the updated duration
     onDurationChange(totalSeconds * 1000);
   };
 
