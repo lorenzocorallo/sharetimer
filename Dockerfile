@@ -14,8 +14,12 @@ RUN go mod download
 RUN GO_ENV=production CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/
 
 FROM alpine:latest AS prod
+LABEL org.opencontainers.image.source=https://github.com/lorenzocorallo/sharetimer
+LABEL org.opencontainers.image.description="ShareTimer"
+LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /app
 COPY --from=frontend /app/dist ./frontend/dist
 COPY --from=backend /app/server .
 EXPOSE 8080
 CMD ["./server"]
+
