@@ -1,4 +1,4 @@
-FROM node:20-slim AS frontend
+FROM --platform=$BUILDPLATFORM node:20-slim AS frontend
 COPY frontend /app
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
@@ -7,13 +7,14 @@ RUN corepack enable
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm run build
 
-FROM golang:1.23-alpine AS backend
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS backend
 WORKDIR /app
 COPY backend/ .
 RUN go mod download 
-RUN GO_ENV=production CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/
+ARG TARGETARCH
+RUN GO_ENV=production CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o server ./cmd/
 
-FROM alpine:latest AS prod
+FROM --platform=$TARGETPLATFORM alpine:latest AS prod
 LABEL org.opencontainers.image.source=https://github.com/lorenzocorallo/sharetimer
 LABEL org.opencontainers.image.description="ShareTimer"
 LABEL org.opencontainers.image.licenses=MIT
