@@ -14,4 +14,5 @@ export default defineConfig({
     TanStackRouterVite(),
     tailwindcss(),
   ],
+  base: process.env.PUBLIC_URL || "/"
 });
